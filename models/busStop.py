@@ -5,7 +5,9 @@ class BusStop:
 
     def generate_passenger_request(self, total_stops):
         #TODO: Add generate passenger request logic
+        pass
 
     def add_passenger(self, passenger):
         #TODO: Add add passenger logic
+        pass
 
