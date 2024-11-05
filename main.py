@@ -1,13 +1,13 @@
-# main.py
+# Main file for the Project
 
-# from gui.app_gui import BusSimulationApp
-# from config.settings import BUS_CAPACITY, NUM_STOPS
+from models.bus import Bus
 
 def main():
-    # # Initialize and run the simulation app
-    # app = BusSimulationApp(bus_capacity=BUS_CAPACITY, num_stops=NUM_STOPS)
-    # app.run()
-    print("Init base file")
+    b = Bus(c=10, stop=0)
+
+    print("Bus Details")
+    print("capacity :", b.c)
+    print("capacity :", b.stop)
 
 if __name__ == "__main__":
     main()
