@@ -6,7 +6,15 @@ class Bus:
         self.passengers = []
 
     def add_passenger(self, passenger):
-        print("To Add Add Passenger Logic")
+        if len(self.passengers) < self.capacity:
+            passenger.in_bus = True
+            passenger.current_bus = self
+            self.passengers.append(passenger)
+            return True
+        return False
 
     def remove_passenger(self, passenger):
-        print("To Add Remove Passenger Logic")
+        if passenger in self.passengers:
+            self.passengers.remove(passenger)
+            passenger.in_bus = False
+            passenger.current_bus = None
