@@ -1,6 +1,7 @@
 # logic/simulation.py
 
-from data.data_structures import Bus, BusStop
+from models.bus import Bus
+from models.busStop import BusStop
 from random import randint
 
 class Simulation:
