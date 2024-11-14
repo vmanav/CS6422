@@ -3,6 +3,8 @@
 from models.bus import Bus
 from models.busStop import BusStop
 from models.passenger import Passenger
+from gui.app_gui import BusSimulationApp
+from config.settings import BUS_CAPACITY, NUM_STOPS
 
 def main():
     b = Bus(capacity=10, current_stop=0)
@@ -20,6 +22,9 @@ def main():
     print("Passenger Details")
     print("Start Stop:",passenger.start_stop)
     print("End Stop:",passenger.end_stop)
+
+    app = BusSimulationApp(bus_capacity=BUS_CAPACITY, num_stops=NUM_STOPS)
+    app.run()
 
 if __name__ == "__main__":
     main()
