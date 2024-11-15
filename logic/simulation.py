@@ -1,38 +1,68 @@
-# logic/simulation.py
-
+# simulation/simulation.py
+import tkinter as tk
+import random
+import math
 from models.bus import Bus
-from models.busStop import BusStop
-from random import randint
+from models.passenger import Passenger
+from ui.canvas_draw import draw_stops, draw_route, draw_bus
 
-class Simulation:
-    def __init__(self, bus_capacity, num_stops):
-        self.bus_capacity = bus_capacity
-        self.stops = [BusStop(i) for i in range(num_stops)]
-        self.buses = [Bus(capacity=bus_capacity, current_stop=0)]  
+class BusSimulation:
+    def __init__(self, root, stop_count=6, bus_capacity=10, stop_wait_time=2):
+        self.root = root
+        self.stop_count = stop_count
+        self.stop_wait_time = stop_wait_time
+        self.bus = Bus(bus_capacity)
+        self.stops = [[] for _ in range(stop_count)]
+        self.passenger_list = []
+        self.passenger_id = 1
+        self.center_x, self.center_y, self.radius = 300, 200, 150
+        self.angle_gap = 360 / stop_count
+        self.stop_coords = [(self.center_x + self.radius * math.cos(math.radians(self.angle_gap * i)),
+                             self.center_y + self.radius * math.sin(math.radians(self.angle_gap * i))) 
+                            for i in range(stop_count)]
+        
+        # Canvas and UI elements
+        self.canvas = tk.Canvas(root, width=600, height=400, bg='white')
+        self.canvas.pack()
+        
+        # Passenger status display
+        self.status_frame = tk.Frame(root)
+        self.status_frame.pack()
+        self.status_text = tk.Text(self.status_frame, height=10, width=70)
+        self.status_text.pack()
+        
+        # Start simulation
+        self.root.after(1000, self.generate_passenger)
+        self.root.after(1000, self.move_bus)
 
     def generate_passenger(self):
-        start_stop = randint(0, len(self.stops) - 1)
-        end_stop = randint(0, len(self.stops) - 1)
-        if start_stop != end_stop:
-            self.stops[start_stop].add_passenger_request(end_stop)
-            print(f"Generated passenger from Stop {start_stop} to Stop {end_stop}")
+        start = random.randint(0, self.stop_count - 1)
+        end = random.choice([i for i in range(self.stop_count) if i != start])
+        passenger = Passenger(self.passenger_id, start, end)
+        self.stops[start].append(passenger)
+        self.passenger_list.append(passenger)
+        self.passenger_id += 1
+        self.update_status()
+        draw_stops(self.canvas, self.stops, self.stop_coords)
+        draw_route(self.canvas, self.stop_coords)
+        self.root.after(1000, self.generate_passenger)
 
-    def manage_buses(self):
-        for bus in self.buses:
-            current_stop = self.stops[bus.current_stop]
+    def move_bus(self):
+        self.bus.current_stop = (self.bus.current_stop + 1) % self.stop_count
+        draw_bus(self.canvas, self.stop_coords, self.bus.current_stop)
+
+        # Board and deboard passengers
+        for passenger in self.stops[self.bus.current_stop][:]:
+            if self.bus.board_passenger(passenger):
+                self.stops[self.bus.current_stop].remove(passenger)
         
-            departing_passengers = [p for p in bus.passengers if p.end_stop == bus.current_stop]
-            for passenger in departing_passengers:
-                bus.remove_passenger(passenger)
-            print(f"Bus at Stop {bus.current_stop}: Dropped off {len(departing_passengers)} passengers")
+        self.bus.deboard_passengers()
+        self.update_status()
+        
+        # Wait before moving to the next stop
+        self.root.after(self.stop_wait_time * 1000, self.move_bus)
 
-            # Board waiting passengers, if there's space on the bus
-            boarding_passengers = []
-            while len(bus.passengers) < bus.capacity and current_stop.waiting_passengers:
-                passenger = current_stop.waiting_passengers.pop(0)
-                if bus.add_passenger(passenger):  # Attempt to board
-                    boarding_passengers.append(passenger)
-            print(f"Bus at Stop {bus.current_stop}: Boarded {len(boarding_passengers)} passengers")
-            
-            # Move bus to next stop (wrap around if it reaches the last stop)
-            bus.current_stop = (bus.current_stop + 1) % len(self.stops)
+    def update_status(self):
+        self.status_text.delete(1.0, tk.END)
+        for p in self.passenger_list:
+            self.status_text.insert(tk.END, f"Passenger {p.id}: {p.status} | Start: {p.start}, End: {p.end}\n")

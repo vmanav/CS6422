@@ -1,20 +1,22 @@
-# Represents a Bus in the System
-class Bus:
-    def __init__(self, capacity, current_stop=0):
-        self.capacity = capacity
-        self.current_stop = current_stop
-        self.passengers = []
+# models/bus.py
+from models.passenger import Passenger
 
-    def add_passenger(self, passenger):
+class Bus:
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.passengers = []
+        self.current_stop = 0
+    
+    def board_passenger(self, passenger: Passenger) -> bool:
         if len(self.passengers) < self.capacity:
-            passenger.in_bus = True
-            passenger.current_bus = self
+            passenger.status = "In Bus"
             self.passengers.append(passenger)
             return True
         return False
 
-    def remove_passenger(self, passenger):
-        if passenger in self.passengers:
-            self.passengers.remove(passenger)
-            passenger.in_bus = False
-            passenger.current_bus = None
+    def deboard_passengers(self) -> list:
+        deboarded = [p for p in self.passengers if p.end == self.current_stop]
+        for p in deboarded:
+            p.status = f"Deboarded at Stop {self.current_stop}"
+            self.passengers.remove(p)
+        return deboarded
