@@ -8,6 +8,8 @@ PASSENGER_GENERATION_INTERVAL = 2  # seconds
 BUS_MOVE_DELAY = 2  # seconds
 STOP_WAIT_TIME = 2  # seconds
 STOP_RADIUS = 25  # Radius for larger stops
+SMOOTH_MOVE_INTERVAL = 50  # milliseconds
+STEPS_PER_ROUTE = 20       # Number of steps between stops for smooth movement
 
 class BusSimulation:
     def __init__(self, root):
@@ -90,34 +92,11 @@ class BusSimulation:
         self.root.after(PASSENGER_GENERATION_INTERVAL * 1000, self.generate_passenger)
 
     def move_bus(self):
-        # Move bus to the next stop
         current_stop, next_stop = ROUTE_CONNECTIONS[self.current_route_index]
-        self.bus.current_stop = next_stop
-        self.current_route_index = (self.current_route_index + 1) % len(ROUTE_CONNECTIONS)
-
-        # Check if the bus has returned to Stop 0
-        if self.bus.current_stop == 0:
-            print("Bus has returned to Stop 0. Capacity reset.")
-            self.bus.passengers = []
-
-        # Draw the route and bus
-        self.draw_route()
-        self.draw_bus()
-
-        # Board and deboard passengers
-        if self.bus.current_stop != max(STOP_POSITIONS.keys()):  # Skip boarding at the last stop
-            for passenger in self.stops[self.bus.current_stop][:]:
-                if self.bus.board_passenger(passenger):
-                    self.stops[self.bus.current_stop].remove(passenger)
-
-        self.bus.deboard_passengers()
-        self.update_status()
-
-        print(f"Bus is at Stop {self.bus.current_stop}. "
-              f"Passengers onboard: {len(self.bus.passengers)}/{self.bus.capacity}")
-
-        # Wait before continuing to the next stop
-        self.root.after(STOP_WAIT_TIME * 1000, self.continue_movement)
+        self.current_route_index = (self.current_route_index + 1) % len(ROUTE_CONNECTIONS)  # Update route index
+        
+        self.smooth_move_bus(current_stop, next_stop)
+     
 
     def continue_movement(self):
         self.root.after(BUS_MOVE_DELAY * 1000, self.move_bus)
@@ -142,7 +121,36 @@ class BusSimulation:
                     x - 35 + i * 10, y - 40, x - 25 + i * 10, y - 30, fill="orange"
                 )
 
-    def draw_bus(self):
-        # Draw the bus at the current stop
-        x, y = STOP_POSITIONS[self.bus.current_stop]
-        self.canvas.create_rectangle(x - 15, y - 15, x + 15, y + 15, fill="red")
+    def smooth_move_bus(self, start_stop, end_stop):
+        x1, y1 = STOP_POSITIONS[start_stop]
+        x2, y2 = STOP_POSITIONS[end_stop]
+        
+        dx = (x2 - x1) / STEPS_PER_ROUTE
+        dy = (y2 - y1) / STEPS_PER_ROUTE
+
+        def step(i):
+            if i <= STEPS_PER_ROUTE:
+                new_x = x1 + i * dx
+                new_y = y1 + i * dy
+
+                self.draw_route()
+                self.canvas.create_rectangle(
+                    new_x - 15, new_y - 15, new_x + 15, new_y + 15, fill="red"
+                )
+
+                self.root.after(SMOOTH_MOVE_INTERVAL, lambda: step(i + 1))
+            else:
+                self.bus.current_stop = end_stop
+
+                for passenger in self.stops[end_stop][:]:
+                    if self.bus.board_passenger(passenger):
+                        self.stops[end_stop].remove(passenger)
+
+                self.bus.deboard_passengers()
+
+                self.update_status()
+                print(f"Bus is at Stop {self.bus.current_stop}. Number of passengers onboard: {len(self.bus.passengers)}/{self.bus.capacity}")
+
+                self.root.after(STOP_WAIT_TIME * 1000, self.move_bus)
+
+        step(0)
