@@ -1,68 +1,98 @@
-# simulation/simulation.py
 import tkinter as tk
-import random
-import math
-from models.bus import Bus
 from models.passenger import Passenger
-from ui.canvas_draw import draw_stops, draw_route, draw_bus
+from models.bus import Bus
+from route import ROUTE_CONNECTIONS, STOP_POSITIONS
+import random
+
+PASSENGER_GENERATION_INTERVAL = 2  # seconds
+BUS_MOVE_DELAY = 2  # seconds
+STOP_WAIT_TIME = 2  # seconds
+STOP_RADIUS = 25  # Radius for larger stops
 
 class BusSimulation:
-    def __init__(self, root, stop_count=6, bus_capacity=10, stop_wait_time=2):
+    def __init__(self, root):
         self.root = root
-        self.stop_count = stop_count
-        self.stop_wait_time = stop_wait_time
-        self.bus = Bus(bus_capacity)
-        self.stops = [[] for _ in range(stop_count)]
+        self.root.title("Bus Simulation")
+
+        self.bus = Bus(capacity=10)
+        self.stops = {i: [] for i in STOP_POSITIONS.keys()}
         self.passenger_list = []
         self.passenger_id = 1
-        self.center_x, self.center_y, self.radius = 300, 200, 150
-        self.angle_gap = 360 / stop_count
-        self.stop_coords = [(self.center_x + self.radius * math.cos(math.radians(self.angle_gap * i)),
-                             self.center_y + self.radius * math.sin(math.radians(self.angle_gap * i))) 
-                            for i in range(stop_count)]
-        
-        # Canvas and UI elements
-        self.canvas = tk.Canvas(root, width=600, height=400, bg='white')
+        self.current_route_index = 0
+
+        self.canvas = tk.Canvas(root, width=900, height=500, bg='white')
         self.canvas.pack()
-        
-        # Passenger status display
+
         self.status_frame = tk.Frame(root)
         self.status_frame.pack()
+        self.status_label = tk.Label(self.status_frame, text="Passenger Status")
+        self.status_label.pack()
         self.status_text = tk.Text(self.status_frame, height=10, width=70)
         self.status_text.pack()
-        
-        # Start simulation
+
         self.root.after(1000, self.generate_passenger)
         self.root.after(1000, self.move_bus)
-
-    def generate_passenger(self):
-        start = random.randint(0, self.stop_count - 1)
-        end = random.choice([i for i in range(self.stop_count) if i != start])
-        passenger = Passenger(self.passenger_id, start, end)
-        self.stops[start].append(passenger)
-        self.passenger_list.append(passenger)
-        self.passenger_id += 1
-        self.update_status()
-        draw_stops(self.canvas, self.stops, self.stop_coords)
-        draw_route(self.canvas, self.stop_coords)
-        self.root.after(1000, self.generate_passenger)
-
-    def move_bus(self):
-        self.bus.current_stop = (self.bus.current_stop + 1) % self.stop_count
-        draw_bus(self.canvas, self.stop_coords, self.bus.current_stop)
-
-        # Board and deboard passengers
-        for passenger in self.stops[self.bus.current_stop][:]:
-            if self.bus.board_passenger(passenger):
-                self.stops[self.bus.current_stop].remove(passenger)
-        
-        self.bus.deboard_passengers()
-        self.update_status()
-        
-        # Wait before moving to the next stop
-        self.root.after(self.stop_wait_time * 1000, self.move_bus)
 
     def update_status(self):
         self.status_text.delete(1.0, tk.END)
         for p in self.passenger_list:
             self.status_text.insert(tk.END, f"Passenger {p.id}: {p.status} | Start: {p.start}, End: {p.end}\n")
+
+    def generate_passenger(self):
+        start = random.choice(list(STOP_POSITIONS.keys()))
+        end = random.choice([i for i in STOP_POSITIONS.keys() if i != start])
+        passenger = Passenger(self.passenger_id, start, end)
+        self.stops[start].append(passenger)
+        self.passenger_list.append(passenger)
+        self.passenger_id += 1
+        self.update_status()
+        self.draw_route()
+        self.root.after(PASSENGER_GENERATION_INTERVAL * 1000, self.generate_passenger)
+
+    def move_bus(self):
+        # Move the bus along the route
+        current_stop, next_stop = ROUTE_CONNECTIONS[self.current_route_index]
+        self.bus.current_stop = next_stop
+        self.current_route_index = (self.current_route_index + 1) % len(ROUTE_CONNECTIONS)
+
+        self.draw_route()
+        self.draw_bus()
+
+        # Board and deboard passengers
+        for passenger in self.stops[self.bus.current_stop][:]:
+            if self.bus.board_passenger(passenger):
+                self.stops[self.bus.current_stop].remove(passenger)
+
+        self.bus.deboard_passengers()
+        self.update_status()
+
+        self.root.after(STOP_WAIT_TIME * 1000, self.continue_movement)
+
+    def continue_movement(self):
+        self.root.after(BUS_MOVE_DELAY * 1000, self.move_bus)
+
+    def draw_route(self):
+        self.canvas.delete("all")
+        # Draw the route as lines connecting stops
+        for (stop1, stop2) in ROUTE_CONNECTIONS:
+            x1, y1 = STOP_POSITIONS[stop1]
+            x2, y2 = STOP_POSITIONS[stop2]
+            self.canvas.create_line(x1, y1, x2, y2, fill="black", width=2)
+
+        # Draw stops as larger circles and passengers as smaller circles
+        for stop, (x, y) in STOP_POSITIONS.items():
+            self.canvas.create_oval(
+                x - STOP_RADIUS, y - STOP_RADIUS, x + STOP_RADIUS, y + STOP_RADIUS,
+                fill="light blue"
+            )
+            self.canvas.create_text(x, y, text=f"Stop {stop}")
+
+            for i, passenger in enumerate(self.stops[stop]):
+                self.canvas.create_oval(
+                    x - 35 + i * 10, y - 40, x - 25 + i * 10, y - 30, fill="orange"
+                )
+
+    def draw_bus(self):
+        # Draw the bus at the current stop
+        x, y = STOP_POSITIONS[self.bus.current_stop]
+        self.canvas.create_rectangle(x - 15, y - 15, x + 15, y + 15, fill="red")

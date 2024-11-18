@@ -1,10 +1,8 @@
-# main.py
-import tkinter as tk
 from logic.simulation import BusSimulation
+import tkinter as tk
 
 def main():
     root = tk.Tk()
-    root.title("Bus Simulation")
     simulation = BusSimulation(root)
     root.mainloop()
 

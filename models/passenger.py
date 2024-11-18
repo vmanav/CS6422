@@ -1,6 +1,5 @@
-# models/passenger.py
 class Passenger:
-    def __init__(self, id: int, start: int, end: int):
+    def __init__(self, id, start, end):
         self.id = id
         self.start = start
         self.end = end
