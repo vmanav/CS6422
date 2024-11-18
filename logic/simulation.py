@@ -122,9 +122,34 @@ class BusSimulation:
                 )
 
     def smooth_move_bus(self, start_stop, end_stop):
+    # If the route is resetting from Stop 7 to Stop 0, skip animation
+        if start_stop == 7 and end_stop == 0:
+            # Directly reset the bus position to Stop 0
+            self.bus.current_stop = 0
+            self.draw_route()
+            self.canvas.create_rectangle(
+                STOP_POSITIONS[0][0] - 15, STOP_POSITIONS[0][1] - 15,
+                STOP_POSITIONS[0][0] + 15, STOP_POSITIONS[0][1] + 15,
+                fill="red"
+            )
+
+            # Handle boarding and deboarding at Stop 0
+            for passenger in self.stops[0][:]:
+                if self.bus.board_passenger(passenger):
+                    self.stops[0].remove(passenger)
+
+            self.bus.deboard_passengers()
+            self.update_status()
+
+            print(f"Bus has reset to Stop 0. Number of passengers onboard: {len(self.bus.passengers)}/{self.bus.capacity}")
+
+            # Wait before continuing to the next stop
+            self.root.after(STOP_WAIT_TIME * 1000, self.move_bus)
+            return
+
+        # Regular animation for other stops
         x1, y1 = STOP_POSITIONS[start_stop]
         x2, y2 = STOP_POSITIONS[end_stop]
-        
         dx = (x2 - x1) / STEPS_PER_ROUTE
         dy = (y2 - y1) / STEPS_PER_ROUTE
 
