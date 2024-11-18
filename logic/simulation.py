@@ -39,8 +39,8 @@ class BusSimulation:
             self.status_text.insert(tk.END, f"Passenger {p.id}: {p.status} | Start: {p.start}, End: {p.end}\n")
 
     def generate_passenger(self):
-        start = random.choice(list(STOP_POSITIONS.keys()))
-        end = random.choice([i for i in STOP_POSITIONS.keys() if i != start])
+        start = random.choice(list(STOP_POSITIONS.keys())[:-1])  # Exclude the last stop
+        end = random.choice([i for i in STOP_POSITIONS.keys() if i > start])  # Ensure end > start
         passenger = Passenger(self.passenger_id, start, end)
         self.stops[start].append(passenger)
         self.passenger_list.append(passenger)
@@ -49,24 +49,37 @@ class BusSimulation:
         self.draw_route()
         self.root.after(PASSENGER_GENERATION_INTERVAL * 1000, self.generate_passenger)
 
+
     def move_bus(self):
-        # Move the bus along the route
+    # Get the current and next stops from the route connections
         current_stop, next_stop = ROUTE_CONNECTIONS[self.current_route_index]
-        self.bus.current_stop = next_stop
-        self.current_route_index = (self.current_route_index + 1) % len(ROUTE_CONNECTIONS)
+        self.bus.current_stop = next_stop  # Move the bus to the next stop
+        self.current_route_index = (self.current_route_index + 1) % len(ROUTE_CONNECTIONS)  # Loop back to 0
+
+        # Log the number of passengers at the current stop
+        print(f"Bus is at Stop {self.bus.current_stop}. Number of passengers onboard: {len(self.bus.passengers)}/{self.bus.capacity}")
+
+        # Check if the bus has returned to Stop 0
+        if self.bus.current_stop == 0:
+            # Reset the bus's passengers (clears the bus)
+            print("Bus has returned to Stop 0. Capacity reset.")
+            self.bus.passengers = []
 
         self.draw_route()
         self.draw_bus()
 
         # Board and deboard passengers
-        for passenger in self.stops[self.bus.current_stop][:]:
-            if self.bus.board_passenger(passenger):
-                self.stops[self.bus.current_stop].remove(passenger)
+        if self.bus.current_stop != max(STOP_POSITIONS.keys()):  # Skip boarding at the last stop
+            for passenger in self.stops[self.bus.current_stop][:]:
+                if self.bus.board_passenger(passenger):
+                    self.stops[self.bus.current_stop].remove(passenger)
 
         self.bus.deboard_passengers()
         self.update_status()
 
+        # Wait before continuing to the next stop
         self.root.after(STOP_WAIT_TIME * 1000, self.continue_movement)
+
 
     def continue_movement(self):
         self.root.after(BUS_MOVE_DELAY * 1000, self.move_bus)
