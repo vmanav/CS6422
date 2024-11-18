@@ -56,9 +56,7 @@ class BusSimulation:
         self.bus.current_stop = next_stop  # Move the bus to the next stop
         self.current_route_index = (self.current_route_index + 1) % len(ROUTE_CONNECTIONS)  # Loop back to 0
 
-        # Log the number of passengers at the current stop
-        print(f"Bus is at Stop {self.bus.current_stop}. Number of passengers onboard: {len(self.bus.passengers)}/{self.bus.capacity}")
-
+        
         # Check if the bus has returned to Stop 0
         if self.bus.current_stop == 0:
             # Reset the bus's passengers (clears the bus)
@@ -76,6 +74,10 @@ class BusSimulation:
 
         self.bus.deboard_passengers()
         self.update_status()
+
+        # Log the number of passengers at the current stop
+        print(f"Bus is at Stop {self.bus.current_stop}. Number of passengers onboard: {len(self.bus.passengers)}/{self.bus.capacity}")
+
 
         # Wait before continuing to the next stop
         self.root.after(STOP_WAIT_TIME * 1000, self.continue_movement)
