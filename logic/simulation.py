@@ -13,7 +13,6 @@ SMOOTH_MOVE_INTERVAL = 50  # milliseconds
 STEPS_PER_ROUTE = 20  # Number of steps between stops for smooth movement
 
 
-
 class BusSimulation:
     def __init__(self, root):
         self.root = root
@@ -80,15 +79,24 @@ class BusSimulation:
         )
 
     def generate_passenger(self):
-        route_choice = random.choice([1, 2])
-        if route_choice == 1:
-            active_stops = {stop for connection in ROUTE1_CONNECTIONS for stop in connection}
-        else:
-            active_stops = {stop for connection in ROUTE2_CONNECTIONS for stop in connection}
+        start = random.choice(list(STOP_POSITIONS.keys())[:-1])
+        end = random.choice([s for s in STOP_POSITIONS.keys() if s > start])
 
-        start = random.choice(list(active_stops)[:-1])
-        end = random.choice([s for s in active_stops if s > start])
+        # Determine if start and end are on the same route
+        route1_stops = {stop for conn in ROUTE1_CONNECTIONS for stop in conn}
+        route2_stops = {stop for conn in ROUTE2_CONNECTIONS for stop in conn}
+
+        if start in route1_stops and end in route2_stops:
+            # Use intersection stop 3 to switch from Route 1 to Route 2
+            intermediate_stop = 3 if start in route1_stops else 4
+        elif start in route2_stops and end in route1_stops:
+            # Use intersection stop 4 to switch from Route 2 to Route 1
+            intermediate_stop = 4 if start in route2_stops else 3
+        else:
+            intermediate_stop = None
+
         passenger = Passenger(self.passenger_id, start, end)
+        passenger.intermediate_stop = intermediate_stop  # Track transfer stop if needed
         self.stops[start].append(passenger)
         self.passenger_list.append(passenger)
         self.passenger_id += 1
@@ -124,10 +132,12 @@ class BusSimulation:
                 fill="light blue"
             )
             self.canvas.create_text(x, y, text=f"Stop {stop}")
+
             for i, passenger in enumerate(self.stops[stop]):
                 self.canvas.create_oval(
                     x - 35 + i * 10, y - 40, x - 25 + i * 10, y - 30, fill="orange"
                 )
+
     def smooth_move_bus(self, bus, start_stop, end_stop, color):
         x1, y1 = STOP_POSITIONS[start_stop]
         x2, y2 = STOP_POSITIONS[end_stop]
@@ -148,21 +158,37 @@ class BusSimulation:
             else:
                 bus.current_stop = end_stop
 
+                # Handle boarding passengers
                 for passenger in self.stops[end_stop][:]:
                     if bus.board_passenger(passenger):
                         self.stops[end_stop].remove(passenger)
 
-                bus.deboard_passengers()
+                # Handle deboarding passengers
+                deboarding_passengers = bus.deboard_passengers()
+
+                # Transfer logic for intersection stops
+                for passenger in deboarding_passengers:
+                    if passenger.intermediate_stop == end_stop:
+                        # Update start stop to intersection stop for next bus
+                        passenger.start = end_stop
+                        passenger.intermediate_stop = None
+
+                        # Determine which route's bus the passenger should board
+                        if passenger.end in {stop for conn in ROUTE2_CONNECTIONS for stop in conn}:
+                            self.stops[end_stop].append(passenger)
+                        elif passenger.end in {stop for conn in ROUTE1_CONNECTIONS for stop in conn}:
+                            self.stops[end_stop].append(passenger)
+
                 self.update_status()
-                if bus == self.bus1:
-                    self.root.after(STOP_WAIT_TIME * 1000, self.move_bus1)
-                else:
-                    self.root.after(STOP_WAIT_TIME * 1000, self.move_bus2)
+                print(f"Bus at Stop {bus.current_stop}. Passengers onboard: {len(bus.passengers)}/{bus.capacity}")
+
+                self.root.after(STOP_WAIT_TIME * 1000, self.move_bus1 if color == "red" else self.move_bus2)
 
         step(0)
 
 
+# Main program
 if __name__ == "__main__":
     root = tk.Tk()
-    app = BusSimulation(root)
+    simulation = BusSimulation(root)
     root.mainloop()

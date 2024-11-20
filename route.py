@@ -1,6 +1,6 @@
 # Define two intersecting routes
-ROUTE1_CONNECTIONS = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7)]
-ROUTE2_CONNECTIONS = [(3, 8), (8, 9), (9, 10), (10, 4)]
+ROUTE1_CONNECTIONS = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7,0)]
+ROUTE2_CONNECTIONS = [(3, 8), (8, 9), (9, 10), (10, 4), (4,3)]
 
 # Define stop positions for both routes (some shared)
 STOP_POSITIONS = {
