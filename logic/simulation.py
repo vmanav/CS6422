@@ -1,194 +1,159 @@
 import tkinter as tk
+from tkinter import ttk
+from models.route import STOP_POSITIONS, ROUTE_CONNECTIONS
 from models.passenger import Passenger
 from models.bus import Bus
+from ui.canvas_draw import draw_stops, draw_routes, draw_passengers, draw_buses
 import random
 
-from route import ROUTE1_CONNECTIONS, ROUTE2_CONNECTIONS, STOP_POSITIONS
-
-PASSENGER_GENERATION_INTERVAL = 2  # seconds
+PASSENGER_GENERATION_INTERVAL = 3 # seconds
 BUS_MOVE_DELAY = 2  # seconds
-STOP_WAIT_TIME = 2  # seconds
-STOP_RADIUS = 25  # Radius for larger stops
-SMOOTH_MOVE_INTERVAL = 50  # milliseconds
-STEPS_PER_ROUTE = 20  # Number of steps between stops for smooth movement
+STOP_RADIUS = 25  # Radius for stops
 
 
 class BusSimulation:
     def __init__(self, root):
         self.root = root
-        self.root.title("Bus Simulation")
+        self.root.title("Enhanced Bus Simulation")
 
-        self.bus1 = Bus(capacity=10)  # Bus for Route 1
-        self.bus2 = Bus(capacity=10)  # Bus for Route 2
+        # Main layout frames
+        self.main_frame = tk.Frame(root, bg="#F5F5F5")
+        self.main_frame.pack(fill=tk.BOTH, expand=True)
 
+        # Canvas for visualization (fully centered and resizable)
+        self.canvas_frame = tk.Frame(self.main_frame, bg="#F5F5F5")
+        self.canvas_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=20, pady=5)
+        self.canvas = tk.Canvas(self.canvas_frame, bg="#FFFFFF")
+        self.canvas.pack(fill=tk.BOTH, expand=True)
+
+        # Status frame for passenger and bus information
+        self.status_frame = tk.Frame(self.main_frame, bg="#E0E0E0", height=150)
+        self.status_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
+
+        # Passenger table using ttk.Treeview
+        self.passenger_table = ttk.Treeview(
+            self.status_frame,
+            columns=("ID", "Status", "Start", "End", "Type"),
+            show="headings",
+            height=6,
+        )
+        self.passenger_table.heading("ID", text="Passenger ID")
+        self.passenger_table.heading("Status", text="Status")
+        self.passenger_table.heading("Start", text="Start Stop")
+        self.passenger_table.heading("End", text="End Stop")
+        self.passenger_table.heading("Type", text="Type")
+
+        # Dynamically adjust column widths and center align text
+        for col in ("ID", "Status", "Start", "End", "Type"):
+            self.passenger_table.column(col, anchor="center", stretch=True)
+
+        self.passenger_table.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        # Passenger count display
+        self.passenger_count_label = tk.Label(
+            self.status_frame,
+            text="Passengers on Buses: ",
+            bg="#E0E0E0",
+            font=("Arial", 12, "bold"),
+        )
+        self.passenger_count_label.pack(pady=5)
+
+        # Simulation data
         self.stops = {i: [] for i in STOP_POSITIONS.keys()}
         self.passenger_list = []
         self.passenger_id = 1
 
-        # Track the routes
-        self.route1_index = 0
-        self.route2_index = 0
-
-        # Canvas for drawing the routes and buses
-        self.canvas = tk.Canvas(root, width=900, height=500, bg='white')
-        self.canvas.pack()
-
-        # Status panel container
-        self.status_panel = tk.Frame(root)
-        self.status_panel.pack(fill=tk.X, pady=5)
-
-        # Passenger Status
-        self.status_frame = tk.Frame(self.status_panel, bg="light gray", relief=tk.RAISED, bd=2)
-        self.status_frame.pack(side=tk.LEFT, padx=10, fill=tk.X, expand=True)
-
-        self.status_label = tk.Label(self.status_frame, text="Passenger Status", anchor="w",
-                                     bg="light gray", font=("Arial", 14, "bold"))
-        self.status_label.pack(fill=tk.X, padx=10, pady=5)
-
-        self.status_text = tk.Text(self.status_frame, height=10, width=50, bg="black", fg="white",
-                                   font=("Arial", 12))
-        self.status_text.pack(fill=tk.BOTH, padx=10, pady=5)
-
-        # Passenger Count
-        self.passenger_count_frame = tk.Frame(self.status_panel, bg="light gray", relief=tk.RAISED, bd=2)
-        self.passenger_count_frame.pack(side=tk.RIGHT, padx=10)
-
-        self.passenger_count_inner_frame = tk.Frame(self.passenger_count_frame, bg="black", relief=tk.FLAT)
-        self.passenger_count_inner_frame.pack(padx=5, pady=5, fill=tk.BOTH, expand=True)
-
-        self.passenger_count_label = tk.Label(
-            self.passenger_count_inner_frame, text="Passengers on Bus 1: 0\nPassengers on Bus 2: 0",
-            font=("Arial", 12), bg="black", fg="white"
-        )
-        self.passenger_count_label.pack(padx=10, pady=10)
+        # Initialize buses
+        self.buses = [
+            Bus(id=1, route=[0, 1, 2, 3, 4, 5, 6, 7], color="#FF6347", capacity=25),
+            Bus(id=2, route=[3, 8, 9, 10], color="#4682B4", capacity=25),
+        ]
 
         # Start simulation
         self.root.after(1000, self.generate_passenger)
-        self.root.after(1000, self.move_bus1)
-        self.root.after(1000, self.move_bus2)
+        self.root.after(1000, self.move_buses)
 
     def update_status(self):
-        self.status_text.delete(1.0, tk.END)
-        self.status_text.insert(tk.END, "Passengers at Stops:\n")
+        """Update the passenger table and bus status."""
+        # Clear the current table
+        for row in self.passenger_table.get_children():
+            self.passenger_table.delete(row)
+
+        # Add passenger information to the table
         for p in self.passenger_list:
-            self.status_text.insert(
-                tk.END, f"Passenger {p.id}: {p.status} | Start: {p.start}, End: {p.end}\n"
+            self.passenger_table.insert(
+                "",
+                "end",
+                values=(
+                    p.id,
+                    p.status,
+                    p.start,
+                    p.end,
+                    "Transit" if p.is_transit else "Direct",
+                ),
             )
-        self.passenger_count_label.config(
-            text=f"Passengers on Bus 1: {len(self.bus1.passengers)}\nPassengers on Bus 2: {len(self.bus2.passengers)}"
+
+        # Update the bus passenger counts
+        passenger_counts = [len(bus.passengers) for bus in self.buses]
+        counts_text = " | ".join(
+            [f"Bus {bus.id}: {len(bus.passengers)} passengers" for bus in self.buses]
         )
+        self.passenger_count_label.config(text=f"Passengers on Buses: {counts_text}")
 
     def generate_passenger(self):
-        start = random.choice(list(STOP_POSITIONS.keys())[:-1])
-        end = random.choice([s for s in STOP_POSITIONS.keys() if s > start])
+        """Generate a new passenger."""
+        start = random.choice(list(STOP_POSITIONS.keys()))
+        end = random.choice([i for i in STOP_POSITIONS.keys() if i != start])
 
-        # Determine if start and end are on the same route
-        route1_stops = {stop for conn in ROUTE1_CONNECTIONS for stop in conn}
-        route2_stops = {stop for conn in ROUTE2_CONNECTIONS for stop in conn}
+        # Determine if the passenger is a transit passenger
+        is_transit = (
+            (start in self.buses[0].route and end not in self.buses[0].route)
+            or (start in self.buses[1].route and end not in self.buses[1].route)
+        )
 
-        if start in route1_stops and end in route2_stops:
-            # Use intersection stop 3 to switch from Route 1 to Route 2
-            intermediate_stop = 3 if start in route1_stops else 4
-        elif start in route2_stops and end in route1_stops:
-            # Use intersection stop 4 to switch from Route 2 to Route 1
-            intermediate_stop = 4 if start in route2_stops else 3
-        else:
-            intermediate_stop = None
-
-        passenger = Passenger(self.passenger_id, start, end)
-        passenger.intermediate_stop = intermediate_stop  # Track transfer stop if needed
+        passenger = Passenger(self.passenger_id, start, end, is_transit=is_transit)
         self.stops[start].append(passenger)
         self.passenger_list.append(passenger)
         self.passenger_id += 1
         self.update_status()
-        self.draw_routes()
+        self.draw_route()
         self.root.after(PASSENGER_GENERATION_INTERVAL * 1000, self.generate_passenger)
 
-    def move_bus1(self):
-        current_stop, next_stop = ROUTE1_CONNECTIONS[self.route1_index]
-        self.route1_index = (self.route1_index + 1) % len(ROUTE1_CONNECTIONS)
-        self.smooth_move_bus(self.bus1, current_stop, next_stop, "red")
+    def move_buses(self):
+        """Move buses and handle passenger boarding/deboarding."""
+        for bus in self.buses:
+            bus.move()
+            deboarded = bus.deboard_passengers()
 
-    def move_bus2(self):
-        current_stop, next_stop = ROUTE2_CONNECTIONS[self.route2_index]
-        self.route2_index = (self.route2_index + 1) % len(ROUTE2_CONNECTIONS)
-        self.smooth_move_bus(self.bus2, current_stop, next_stop, "blue")
+            # Handle deboarded passengers
+            for passenger in deboarded:
+                if passenger.is_transit and passenger.current_leg == 2:
+                    continue  # No re-adding, they've completed the trip
+                if passenger.is_transit and passenger.current_leg == 1:
+                    self.stops[passenger.intermediate_stop].append(passenger)
+                else:
+                    self.stops[passenger.end].append(passenger)
 
-    def draw_routes(self):
+            # Handle boarding passengers
+            for passenger in self.stops[bus.current_stop][:]:
+                if bus.board_passenger(passenger):
+                    self.stops[bus.current_stop].remove(passenger)
+
+        self.update_status()
+        self.draw_route()
+        self.root.after(BUS_MOVE_DELAY * 1000, self.move_buses)
+
+    def draw_route(self):
+        """Draw the routes, stops, buses, and passengers."""
         self.canvas.delete("all")
-        for (stop1, stop2) in ROUTE1_CONNECTIONS:
-            x1, y1 = STOP_POSITIONS[stop1]
-            x2, y2 = STOP_POSITIONS[stop2]
-            self.canvas.create_line(x1, y1, x2, y2, fill="black", width=2)
 
-        for (stop1, stop2) in ROUTE2_CONNECTIONS:
-            x1, y1 = STOP_POSITIONS[stop1]
-            x2, y2 = STOP_POSITIONS[stop2]
-            self.canvas.create_line(x1, y1, x2, y2, fill="gray", width=2)
+        # Draw routes
+        draw_routes(self.canvas, ROUTE_CONNECTIONS, STOP_POSITIONS, color="#FF6347")
+        draw_routes(
+            self.canvas, [(3, 8), (8, 9), (9, 10), (10, 3)], STOP_POSITIONS, color="#4682B4"
+        )
 
-        for stop, (x, y) in STOP_POSITIONS.items():
-            self.canvas.create_oval(
-                x - STOP_RADIUS, y - STOP_RADIUS, x + STOP_RADIUS, y + STOP_RADIUS,
-                fill="light blue"
-            )
-            self.canvas.create_text(x, y, text=f"Stop {stop}")
-
-            for i, passenger in enumerate(self.stops[stop]):
-                self.canvas.create_oval(
-                    x - 35 + i * 10, y - 40, x - 25 + i * 10, y - 30, fill="orange"
-                )
-
-    def smooth_move_bus(self, bus, start_stop, end_stop, color):
-        x1, y1 = STOP_POSITIONS[start_stop]
-        x2, y2 = STOP_POSITIONS[end_stop]
-        dx = (x2 - x1) / STEPS_PER_ROUTE
-        dy = (y2 - y1) / STEPS_PER_ROUTE
-
-        def step(i):
-            if i <= STEPS_PER_ROUTE:
-                new_x = x1 + i * dx
-                new_y = y1 + i * dy
-
-                self.draw_routes()
-                self.canvas.create_rectangle(
-                    new_x - 15, new_y - 15, new_x + 15, new_y + 15, fill=color
-                )
-
-                self.root.after(SMOOTH_MOVE_INTERVAL, lambda: step(i + 1))
-            else:
-                bus.current_stop = end_stop
-
-                # Handle boarding passengers
-                for passenger in self.stops[end_stop][:]:
-                    if bus.board_passenger(passenger):
-                        self.stops[end_stop].remove(passenger)
-
-                # Handle deboarding passengers
-                deboarding_passengers = bus.deboard_passengers()
-
-                # Transfer logic for intersection stops
-                for passenger in deboarding_passengers:
-                    if passenger.intermediate_stop == end_stop:
-                        # Update start stop to intersection stop for next bus
-                        passenger.start = end_stop
-                        passenger.intermediate_stop = None
-
-                        # Determine which route's bus the passenger should board
-                        if passenger.end in {stop for conn in ROUTE2_CONNECTIONS for stop in conn}:
-                            self.stops[end_stop].append(passenger)
-                        elif passenger.end in {stop for conn in ROUTE1_CONNECTIONS for stop in conn}:
-                            self.stops[end_stop].append(passenger)
-
-                self.update_status()
-                print(f"Bus at Stop {bus.current_stop}. Passengers onboard: {len(bus.passengers)}/{bus.capacity}")
-
-                self.root.after(STOP_WAIT_TIME * 1000, self.move_bus1 if color == "red" else self.move_bus2)
-
-        step(0)
-
-
-# Main program
-if __name__ == "__main__":
-    root = tk.Tk()
-    simulation = BusSimulation(root)
-    root.mainloop()
+        # Draw stops, passengers, and buses
+        draw_stops(self.canvas, self.stops, STOP_POSITIONS, STOP_RADIUS)
+        draw_passengers(self.canvas, self.stops, STOP_POSITIONS)
+        draw_buses(self.canvas, self.buses, STOP_POSITIONS)

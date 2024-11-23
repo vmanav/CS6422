@@ -1,32 +1,34 @@
+from collections import deque
+
 class Bus:
-    def __init__(self, capacity):
+    def __init__(self, id, route, color, capacity=10):
+        self.id = id
+        self.route = deque(route)
+        self.color = color
         self.capacity = capacity
-        self.passengers = []  # List of passengers on the bus
-        self.current_stop = None  # Current stop of the bus
+        self.passengers = []
+        self.current_stop = self.route[0]
+
+    def move(self):
+        self.route.rotate(-1)
+        self.current_stop = self.route[0]
 
     def board_passenger(self, passenger):
-        """
-        Boards a passenger onto the bus if there's space available.
-        Returns True if the passenger was successfully boarded.
-        """
         if len(self.passengers) < self.capacity:
-            passenger.status = "On Bus"
             self.passengers.append(passenger)
+            passenger.status = f"On Bus {self.id}"
             return True
         return False
 
     def deboard_passengers(self):
-        """
-        Deboards all passengers whose destination matches the current stop.
-        Returns a list of deboarded passengers.
-        """
-        deboarded_passengers = [
-            p for p in self.passengers if p.end == self.current_stop
-        ]
-        # Remove these passengers from the bus
-        self.passengers = [
-            p for p in self.passengers if p.end != self.current_stop
-        ]
-        for passenger in deboarded_passengers:
-            passenger.status = "Deboarded"
-        return deboarded_passengers
+        deboarded = []
+        for passenger in self.passengers[:]:
+            if (passenger.is_transit and passenger.current_leg == 1 and passenger.intermediate_stop == self.current_stop) or \
+               (not passenger.is_transit and passenger.end == self.current_stop) or \
+               (passenger.is_transit and passenger.current_leg == 2 and passenger.end == self.current_stop):
+                self.passengers.remove(passenger)
+                passenger.status = f"Deboarded at Stop {self.current_stop}"
+                if passenger.is_transit:
+                    passenger.current_leg += 1
+                deboarded.append(passenger)
+        return deboarded
