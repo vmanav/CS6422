@@ -7,7 +7,7 @@ from ui.canvas_draw import draw_stops, draw_routes, draw_passengers, draw_buses
 import random
 
 PASSENGER_GENERATION_INTERVAL = 3 # seconds
-BUS_MOVE_DELAY = 2  # seconds
+BUS_MOVE_DELAY = 5  # seconds
 STOP_RADIUS = 25  # Radius for stops
 
 
@@ -73,32 +73,114 @@ class BusSimulation:
         self.root.after(1000, self.generate_passenger)
         self.root.after(1000, self.move_buses)
 
+    def move_buses(self):
+        """Move buses and handle passenger boarding/deboarding."""
+        for bus in self.buses:
+            # Move the bus to the next stop
+            bus.move()
+            print(f"Bus {bus.id} moved to Stop {bus.current_stop}")
+
+            # Handle deboarding passengers
+            deboarded = bus.deboard_passengers()
+            for passenger in deboarded:
+                # If the passenger has completed their journey, skip adding back to the stop
+                if not passenger.is_transit or (passenger.is_transit and passenger.current_leg == 2):
+                    continue  # Do nothing for passengers completing their journey
+
+                # Transit passengers waiting for the next bus
+                if passenger not in self.stops[bus.current_stop]:
+                    self.stops[bus.current_stop].append(passenger)
+
+            # Handle boarding passengers
+            for passenger in self.stops[bus.current_stop][:]:  # Work on a copy of the stop list
+                if bus.board_passenger(passenger):
+                    self.stops[bus.current_stop].remove(passenger)
+                    print(f"Passenger {passenger.id} boarded Bus {bus.id} at Stop {bus.current_stop}")
+
+        # Update GUI and terminal
+        self.update_status()
+        self.draw_route()
+
+        # Schedule the next iteration
+        self.root.after(BUS_MOVE_DELAY * 1000, self.move_buses)
+
+
     def update_status(self):
-        """Update the passenger table and bus status."""
-        # Clear the current table
-        for row in self.passenger_table.get_children():
-            self.passenger_table.delete(row)
+            """Update the passenger table in the GUI and provide detailed simulation status in the terminal."""
+            # Clear the current table
+            for row in self.passenger_table.get_children():
+                self.passenger_table.delete(row)
 
-        # Add passenger information to the table
-        for p in self.passenger_list:
-            self.passenger_table.insert(
-                "",
-                "end",
-                values=(
-                    p.id,
-                    p.status,
-                    p.start,
-                    p.end,
-                    "Transit" if p.is_transit else "Direct",
-                ),
-            )
+            # Update the passenger table in the GUI
+            for passenger in self.passenger_list:
+                self.passenger_table.insert(
+                    "",
+                    "end",
+                    values=(
+                        passenger.id,
+                        passenger.status,
+                        passenger.start,
+                        passenger.end,
+                        "Transit" if passenger.is_transit else "Direct",
+                    ),
+                )
 
-        # Update the bus passenger counts
-        passenger_counts = [len(bus.passengers) for bus in self.buses]
-        counts_text = " | ".join(
-            [f"Bus {bus.id}: {len(bus.passengers)} passengers" for bus in self.buses]
-        )
-        self.passenger_count_label.config(text=f"Passengers on Buses: {counts_text}")
+            # Terminal log for bus and passenger statuses
+            terminal_log = []
+
+            for bus in self.buses:
+                onboard = bus.passengers
+                deboarding = [
+                    p for p in bus.passengers
+                    if (not p.is_transit and p.end == bus.current_stop)
+                    or (p.is_transit and p.current_leg == 1 and p.intermediate_stop == bus.current_stop)
+                    or (p.is_transit and p.current_leg == 2 and p.end == bus.current_stop)
+                ]
+                transit = [p for p in onboard if p.is_transit]
+
+                # Add Bus status
+                terminal_log.append(f"--- Bus {bus.id} ---")
+                terminal_log.append(f"  Current Stop: {bus.current_stop}")
+                terminal_log.append(f"  Passengers On Board: {len(bus.passengers)}/{bus.capacity}")
+                
+                # Onboard passengers
+                for passenger in onboard:
+                    terminal_log.append(
+                        f"    Passenger {passenger.id}: On Bus {bus.id} | Start: {passenger.start} | End: {passenger.end} | {'Transit' if passenger.is_transit else 'Direct'}"
+                    )
+                
+                # Deboarding passengers
+                if deboarding:
+                    terminal_log.append("  Deboarding Passengers:")
+                    for passenger in deboarding:
+                        terminal_log.append(
+                            f"    Passenger {passenger.id}: Deboarding at Stop {bus.current_stop} | Final Stop: {passenger.end}"
+                        )
+                else:
+                    terminal_log.append("  Deboarding Passengers: None")
+
+                # Transit passengers
+                if transit:
+                    terminal_log.append("  Transit Passengers:")
+                    for passenger in transit:
+                        if passenger.current_leg == 1:
+                            terminal_log.append(
+                                f"    Passenger {passenger.id}: In Transit to Stop {passenger.intermediate_stop} | Final Stop: {passenger.end}"
+                            )
+                        elif passenger.current_leg == 2:
+                            terminal_log.append(
+                                f"    Passenger {passenger.id}: In Transit to Final Stop: {passenger.end}"
+                            )
+                else:
+                    terminal_log.append("  Transit Passengers: None")
+                
+                terminal_log.append("")  # Add spacing between buses
+
+            # Print the detailed log to the terminal
+            print("\n=== Simulation Status ===")
+            print("\n".join(terminal_log))
+            print("=========================")
+
 
     def generate_passenger(self):
         """Generate a new passenger."""
@@ -119,29 +201,6 @@ class BusSimulation:
         self.draw_route()
         self.root.after(PASSENGER_GENERATION_INTERVAL * 1000, self.generate_passenger)
 
-    def move_buses(self):
-        """Move buses and handle passenger boarding/deboarding."""
-        for bus in self.buses:
-            bus.move()
-            deboarded = bus.deboard_passengers()
-
-            # Handle deboarded passengers
-            for passenger in deboarded:
-                if passenger.is_transit and passenger.current_leg == 2:
-                    continue  # No re-adding, they've completed the trip
-                if passenger.is_transit and passenger.current_leg == 1:
-                    self.stops[passenger.intermediate_stop].append(passenger)
-                else:
-                    self.stops[passenger.end].append(passenger)
-
-            # Handle boarding passengers
-            for passenger in self.stops[bus.current_stop][:]:
-                if bus.board_passenger(passenger):
-                    self.stops[bus.current_stop].remove(passenger)
-
-        self.update_status()
-        self.draw_route()
-        self.root.after(BUS_MOVE_DELAY * 1000, self.move_buses)
 
     def draw_route(self):
         """Draw the routes, stops, buses, and passengers."""
