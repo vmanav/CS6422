@@ -134,9 +134,12 @@ class BusSimulation:
             self.canvas.create_text(x, y, text=f"Stop {stop}")
 
             for i, passenger in enumerate(self.stops[stop]):
-                self.canvas.create_oval(
-                    x - 35 + i * 10, y - 40, x - 25 + i * 10, y - 30, fill="orange"
-                )
+                if(passenger.intermediate_stop):
+                    self.canvas.create_polygon(x - 30 + i * 10, y - 40, x - 40 + i * 10, y - 20, x - 20 + i * 10, y - 20, fill="orange")
+                else:
+                    self.canvas.create_oval(
+                        x - 35 + i * 10, y - 40, x - 25 + i * 10, y - 30, fill="orange"
+                    )
 
     def smooth_move_bus(self, bus, start_stop, end_stop, color):
         x1, y1 = STOP_POSITIONS[start_stop]
