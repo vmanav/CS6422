@@ -25,8 +25,8 @@ class Bus:
         ]
 
         transit_passengers = [
-                    p for p in self.passengers if p.intermediate_stop == self.current_stop
-                ]
+            p for p in self.passengers if p.intermediate_stop == self.current_stop
+        ]
         # transit_passengers = []
         # for passenger in self.passengers:
         #     if(passenger.intermediate_stop):
@@ -35,12 +35,16 @@ class Bus:
         #         ]
         # Remove these passengers from the bus
         self.passengers = [
-            p for p in self.passengers if p.end != self.current_stop
+            p for p in self.passengers if p.end != self.current_stop and p.intermediate_stop != self.current_stop
         ]
+        print("Passengers on bus: ", str(self.passengers))
+
         for passenger in deboarded_passengers:
             passenger.status = "Deboarded"
+            print("Deboarded passenger - ", passenger.id)
 
         for passenger in transit_passengers:
             passenger.status = "Debaorded at Intersection stop"
+            print("Deboarded passenger at intersection - ", passenger.id)
             
-        return [deboarded_passengers, transit_passengers];
+        return [deboarded_passengers, transit_passengers]

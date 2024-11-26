@@ -5,7 +5,7 @@ import random
 
 from route import ROUTE1_CONNECTIONS, ROUTE2_CONNECTIONS, STOP_POSITIONS
 
-PASSENGER_GENERATION_INTERVAL = 5  # seconds
+PASSENGER_GENERATION_INTERVAL = 3  # seconds
 BUS_MOVE_DELAY = 2  # seconds
 STOP_WAIT_TIME = 2  # seconds
 STOP_RADIUS = 25  # Radius for larger stops
@@ -99,9 +99,11 @@ class BusSimulation:
         passenger.intermediate_stop = intermediate_stop  # Track transfer stop if needed
         self.stops[start].append(passenger)
         self.passenger_list.append(passenger)
+        # print("self.passenger_list in BusSimulation", self.passenger_list)
         self.passenger_id += 1
         self.update_status()
         self.draw_routes()
+        print("Passenger generated: ", passenger)
         self.root.after(PASSENGER_GENERATION_INTERVAL * 1000, self.generate_passenger)
 
     def move_bus1(self):
@@ -165,6 +167,7 @@ class BusSimulation:
                 for passenger in self.stops[end_stop][:]:
                     if bus.board_passenger(passenger):
                         self.stops[end_stop].remove(passenger)
+                        print("Boarded passenger: ", passenger.id)
 
                 # Handle deboarding passengers
                 [deboarding_passengers, transit_passengers] = bus.deboard_passengers()
@@ -177,7 +180,7 @@ class BusSimulation:
                         # Update start stop to intersection stop for next bus
                     passenger.start = end_stop
                     passenger.intermediate_stop = None
-                    self.stops[end_stop].append(passenger)
+                    # self.stops[end_stop].append(passenger)
                         #Determine which route's bus the passenger should board
                     if passenger.end in {stop for conn in ROUTE2_CONNECTIONS for stop in conn}:
                         self.stops[end_stop].append(passenger)
