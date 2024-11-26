@@ -85,18 +85,24 @@ class BusSimulation:
         # Determine if start and end are on the same route
         route1_stops = {stop for conn in ROUTE1_CONNECTIONS for stop in conn}
         route2_stops = {stop for conn in ROUTE2_CONNECTIONS for stop in conn}
+        print(route1_stops)
+        print(route2_stops)
 
-        if start in route1_stops and end in route2_stops:
+        intermediate_stop = None
+
+        if end == 3 or end == 4:
+            print("End stop is intermediate stop", end)
+        elif start == 3 or start == 4:
+            print("Start stop is intermediate stop", start)
+        elif start in route1_stops and end in route2_stops:
             # Use intersection stop 3 to switch from Route 1 to Route 2
-            intermediate_stop = 3 if start in route1_stops else 4
+            intermediate_stop = 3
         elif start in route2_stops and end in route1_stops:
             # Use intersection stop 4 to switch from Route 2 to Route 1
-            intermediate_stop = 4 if start in route2_stops else 3
-        else:
-            intermediate_stop = None
+            intermediate_stop = 4
 
-        passenger = Passenger(self.passenger_id, start, end)
-        passenger.intermediate_stop = intermediate_stop  # Track transfer stop if needed
+        passenger = Passenger(self.passenger_id, start, end, intermediate_stop)
+        # passenger.intermediate_stop = intermediate_stop  # Track transfer stop if needed
         self.stops[start].append(passenger)
         self.passenger_list.append(passenger)
         self.passenger_id += 1
@@ -162,6 +168,8 @@ class BusSimulation:
                 for passenger in self.stops[end_stop][:]:
                     if bus.board_passenger(passenger):
                         self.stops[end_stop].remove(passenger)
+                        print(f"Passenger {passenger.id} boarded. Start stop: {passenger.start}, End stop: {passenger.end}"
+                              f", Intermediate stop: ' {str(passenger.intermediate_stop) if str(passenger.intermediate_stop) else ''}")
 
                 # Handle deboarding passengers
                 deboarding_passengers = bus.deboard_passengers()

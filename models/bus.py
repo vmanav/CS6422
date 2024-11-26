@@ -20,6 +20,11 @@ class Bus:
         Deboards all passengers whose destination matches the current stop.
         Returns a list of deboarded passengers.
         """
+
+        transit_passengers = [
+            p for p in self.passengers if p.end == self.current_stop
+        ]
+
         deboarded_passengers = [
             p for p in self.passengers if p.end == self.current_stop
         ]
