@@ -30,7 +30,7 @@ class BusSimulation:
         self.route2_index = 0
 
         # Canvas for drawing the routes and buses
-        self.canvas = tk.Canvas(root, width=900, height=500, bg='white')
+        self.canvas = tk.Canvas(root, width=900, height=500, bg="white")
         self.canvas.pack()
 
         # Status panel container
@@ -41,12 +41,13 @@ class BusSimulation:
         self.status_frame = tk.Frame(self.status_panel, bg="light gray", relief=tk.RAISED, bd=2)
         self.status_frame.pack(side=tk.LEFT, padx=10, fill=tk.X, expand=True)
 
-        self.status_label = tk.Label(self.status_frame, text="Passenger Status", anchor="w",
-                                     bg="light gray", font=("Arial", 14, "bold"))
+        self.status_label = tk.Label(
+            self.status_frame, text="Passenger Status", anchor="w",
+            bg="light gray", font=("Arial", 14, "bold")
+        )
         self.status_label.pack(fill=tk.X, padx=10, pady=5)
 
-        self.status_text = tk.Text(self.status_frame, height=10, width=50, bg="black", fg="white",
-                                   font=("Arial", 12))
+        self.status_text = tk.Text(self.status_frame, height=10, width=50, bg="black", fg="white", font=("Arial", 12))
         self.status_text.pack(fill=tk.BOTH, padx=10, pady=5)
 
         # Passenger Count
@@ -57,7 +58,8 @@ class BusSimulation:
         self.passenger_count_inner_frame.pack(padx=5, pady=5, fill=tk.BOTH, expand=True)
 
         self.passenger_count_label = tk.Label(
-            self.passenger_count_inner_frame, text="Passengers on Bus 1: 0\nPassengers on Bus 2: 0",
+            self.passenger_count_inner_frame,
+            text="Passengers on Bus 1: 0\nPassengers on Bus 2: 0",
             font=("Arial", 12), bg="black", fg="white"
         )
         self.passenger_count_label.pack(padx=10, pady=10)
@@ -87,11 +89,9 @@ class BusSimulation:
         route2_stops = {stop for conn in ROUTE2_CONNECTIONS for stop in conn}
 
         if start in route1_stops and end in route2_stops:
-            # Use intersection stop 3 to switch from Route 1 to Route 2
-            intermediate_stop = 3 if start in route1_stops else 4
+            intermediate_stop = 3  # Intersection Stop
         elif start in route2_stops and end in route1_stops:
-            # Use intersection stop 4 to switch from Route 2 to Route 1
-            intermediate_stop = 4 if start in route2_stops else 3
+            intermediate_stop = 4  # Intersection Stop
         else:
             intermediate_stop = None
 
@@ -99,11 +99,9 @@ class BusSimulation:
         passenger.intermediate_stop = intermediate_stop  # Track transfer stop if needed
         self.stops[start].append(passenger)
         self.passenger_list.append(passenger)
-        # print("self.passenger_list in BusSimulation", self.passenger_list)
         self.passenger_id += 1
         self.update_status()
         self.draw_routes()
-        print("Passenger generated: ", passenger)
         self.root.after(PASSENGER_GENERATION_INTERVAL * 1000, self.generate_passenger)
 
     def move_bus1(self):
@@ -149,16 +147,17 @@ class BusSimulation:
         dx = (x2 - x1) / STEPS_PER_ROUTE
         dy = (y2 - y1) / STEPS_PER_ROUTE
 
+        bus_tag = f"bus_{color}"
+
         def step(i):
             if i <= STEPS_PER_ROUTE:
                 new_x = x1 + i * dx
                 new_y = y1 + i * dy
-
-                self.draw_routes()
+                self.canvas.delete(bus_tag)
                 self.canvas.create_rectangle(
-                    new_x - 15, new_y - 15, new_x + 15, new_y + 15, fill=color
+                    new_x - 15, new_y - 15, new_x + 15, new_y + 15,
+                    fill=color, outline="black", tags=bus_tag
                 )
-
                 self.root.after(SMOOTH_MOVE_INTERVAL, lambda: step(i + 1))
             else:
                 bus.current_stop = end_stop
@@ -188,14 +187,14 @@ class BusSimulation:
                         self.stops[end_stop].append(passenger) 
 
                 self.update_status()
-                print(f"Bus at Stop {bus.current_stop}. Passengers onboard: {len(bus.passengers)}/{bus.capacity}")
-
-                self.root.after(STOP_WAIT_TIME * 1000, self.move_bus1 if color == "red" else self.move_bus2)
+                self.root.after(
+                    STOP_WAIT_TIME * 1000,
+                    self.move_bus1 if color == "red" else self.move_bus2
+                )
 
         step(0)
 
 
-# Main program
 if __name__ == "__main__":
     root = tk.Tk()
     simulation = BusSimulation(root)
