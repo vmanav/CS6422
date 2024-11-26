@@ -10,7 +10,7 @@ class Bus:
         Returns True if the passenger was successfully boarded.
         """
         if len(self.passengers) < self.capacity:
-            passenger.status = "On Bus"
+            passenger.status = f"On Bus and Intermediate Stop = {passenger.intermediate_stop}" 
             self.passengers.append(passenger)
             return True
         return False
@@ -23,10 +23,24 @@ class Bus:
         deboarded_passengers = [
             p for p in self.passengers if p.end == self.current_stop
         ]
+
+        transit_passengers = [
+                    p for p in self.passengers if p.intermediate_stop == self.current_stop
+                ]
+        # transit_passengers = []
+        # for passenger in self.passengers:
+        #     if(passenger.intermediate_stop):
+        #         transit_passengers = [
+        #             p for p in self.passengers if p.intermediate_stop == self.current_stop
+        #         ]
         # Remove these passengers from the bus
         self.passengers = [
             p for p in self.passengers if p.end != self.current_stop
         ]
         for passenger in deboarded_passengers:
             passenger.status = "Deboarded"
-        return deboarded_passengers
+
+        for passenger in transit_passengers:
+            passenger.status = "Debaorded at Intersection stop"
+            
+        return [deboarded_passengers, transit_passengers];

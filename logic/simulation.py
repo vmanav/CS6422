@@ -5,7 +5,7 @@ import random
 
 from route import ROUTE1_CONNECTIONS, ROUTE2_CONNECTIONS, STOP_POSITIONS
 
-PASSENGER_GENERATION_INTERVAL = 2  # seconds
+PASSENGER_GENERATION_INTERVAL = 5  # seconds
 BUS_MOVE_DELAY = 2  # seconds
 STOP_WAIT_TIME = 2  # seconds
 STOP_RADIUS = 25  # Radius for larger stops
@@ -72,7 +72,7 @@ class BusSimulation:
         self.status_text.insert(tk.END, "Passengers at Stops:\n")
         for p in self.passenger_list:
             self.status_text.insert(
-                tk.END, f"Passenger {p.id}: {p.status} | Start: {p.start}, End: {p.end}\n"
+                tk.END, f"Passenger {p.id}: {p.status} | Start: {p.start}, End: {p.end}, Intermediate: {p.intermediate_stop}\n"
             )
         self.passenger_count_label.config(
             text=f"Passengers on Bus 1: {len(self.bus1.passengers)}\nPassengers on Bus 2: {len(self.bus2.passengers)}"
@@ -164,20 +164,22 @@ class BusSimulation:
                         self.stops[end_stop].remove(passenger)
 
                 # Handle deboarding passengers
-                deboarding_passengers = bus.deboard_passengers()
+                [deboarding_passengers, transit_passengers] = bus.deboard_passengers()
+
+                
 
                 # Transfer logic for intersection stops
-                for passenger in deboarding_passengers:
-                    if passenger.intermediate_stop == end_stop:
+                for passenger in transit_passengers:
+                    # if passenger.intermediate_stop == end_stop:
                         # Update start stop to intersection stop for next bus
-                        passenger.start = end_stop
-                        passenger.intermediate_stop = None
-
-                        # Determine which route's bus the passenger should board
-                        if passenger.end in {stop for conn in ROUTE2_CONNECTIONS for stop in conn}:
-                            self.stops[end_stop].append(passenger)
-                        elif passenger.end in {stop for conn in ROUTE1_CONNECTIONS for stop in conn}:
-                            self.stops[end_stop].append(passenger)
+                    passenger.start = end_stop
+                    passenger.intermediate_stop = None
+                    self.stops[end_stop].append(passenger)
+                        #Determine which route's bus the passenger should board
+                    if passenger.end in {stop for conn in ROUTE2_CONNECTIONS for stop in conn}:
+                        self.stops[end_stop].append(passenger)
+                    elif passenger.end in {stop for conn in ROUTE1_CONNECTIONS for stop in conn}:
+                        self.stops[end_stop].append(passenger) 
 
                 self.update_status()
                 print(f"Bus at Stop {bus.current_stop}. Passengers onboard: {len(bus.passengers)}/{bus.capacity}")

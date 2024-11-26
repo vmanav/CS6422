@@ -3,4 +3,5 @@ class Passenger:
         self.id = id
         self.start = start
         self.end = end
+        self.intermediate_stop = None
         self.status = f"Waiting at Stop {start}"
