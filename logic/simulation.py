@@ -121,12 +121,12 @@ class BusSimulation:
         for (stop1, stop2) in ROUTE1_CONNECTIONS:
             x1, y1 = STOP_POSITIONS[stop1]
             x2, y2 = STOP_POSITIONS[stop2]
-            self.canvas.create_line(x1, y1, x2, y2, fill="black", width=2)
+            self.canvas.create_line(x1, y1, x2, y2, fill="red", width=10)
 
         for (stop1, stop2) in ROUTE2_CONNECTIONS:
             x1, y1 = STOP_POSITIONS[stop1]
             x2, y2 = STOP_POSITIONS[stop2]
-            self.canvas.create_line(x1, y1, x2, y2, fill="gray", width=2)
+            self.canvas.create_line(x1, y1, x2, y2, fill="blue", width=10)
 
         for stop, (x, y) in STOP_POSITIONS.items():
             self.canvas.create_oval(
