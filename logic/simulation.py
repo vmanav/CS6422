@@ -5,7 +5,7 @@ import random
 
 from route import ROUTE1_CONNECTIONS, ROUTE2_CONNECTIONS, STOP_POSITIONS
 
-PASSENGER_GENERATION_INTERVAL = 3  # seconds
+PASSENGER_GENERATION_INTERVAL = 1  # seconds
 BUS_MOVE_DELAY = 2  # seconds
 STOP_WAIT_TIME = 2  # seconds
 STOP_RADIUS = 25  # Radius for larger stops
@@ -18,8 +18,9 @@ class BusSimulation:
         self.root = root
         self.root.title("Bus Simulation")
 
-        self.bus1 = Bus(capacity=10)  # Bus for Route 1
-        self.bus2 = Bus(capacity=10)  # Bus for Route 2
+        self.bus1 = Bus(capacity=15, name="B1")  # Bus for Route 1
+        self.bus2 = Bus(capacity=15, name="B2")  # Bus for Route 2
+        self.bus1_help = Bus(capacity=30, name="BH")  # Bus for Route 1
 
         self.stops = {i: [] for i in STOP_POSITIONS.keys()}
         self.passenger_list = []
@@ -27,7 +28,9 @@ class BusSimulation:
 
         # Track the routes
         self.route1_index = 0
+        self.route1_help_index = 0
         self.route2_index = 0
+        self.helper_bus = False
 
         # Canvas for drawing the routes and buses
         self.canvas = tk.Canvas(root, width=900, height=500, bg="white")
@@ -107,7 +110,15 @@ class BusSimulation:
     def move_bus1(self):
         current_stop, next_stop = ROUTE1_CONNECTIONS[self.route1_index]
         self.route1_index = (self.route1_index + 1) % len(ROUTE1_CONNECTIONS)
+        print("Bus 1 CS: ", current_stop, ", NS: ", next_stop, "Cap: ", len(self.bus1.passengers))
         self.smooth_move_bus(self.bus1, current_stop, next_stop, "red")
+
+    def move_bus1_help(self):
+        self.route1_help_index = self.route1_index-2
+        current_stop, next_stop = ROUTE1_CONNECTIONS[self.route1_help_index]
+        self.route1_help_index = (self.route1_help_index + 1) % len(ROUTE1_CONNECTIONS)
+        print("Helper CS: ", current_stop, ", NS: ", next_stop, "Cap: ", len(self.bus1_help .passengers))
+        self.smooth_move_bus(self.bus1_help, current_stop, next_stop, "red")
 
     def move_bus2(self):
         current_stop, next_stop = ROUTE2_CONNECTIONS[self.route2_index]
@@ -167,6 +178,11 @@ class BusSimulation:
                     if bus.board_passenger(passenger):
                         self.stops[end_stop].remove(passenger)
                         print("Boarded passenger: ", passenger.id)
+                    elif self.helper_bus == False and color =="red":
+                        print("Adding new bus")
+                        print(self.helper_bus)
+                        self.root.after(1000, self.move_bus1_help)
+                        self.helper_bus = True
 
                 # Handle deboarding passengers
                 [deboarding_passengers, transit_passengers] = bus.deboard_passengers()
@@ -187,10 +203,22 @@ class BusSimulation:
                         self.stops[end_stop].append(passenger) 
 
                 self.update_status()
-                self.root.after(
-                    STOP_WAIT_TIME * 1000,
-                    self.move_bus1 if color == "red" else self.move_bus2
-                )
+
+                if bus.name == "B1":
+                    self.root.after(STOP_WAIT_TIME * 1000, self.move_bus1)
+                elif bus.name == "BH":
+                    self.root.after(STOP_WAIT_TIME * 1000, self.move_bus1_help)
+                elif bus.name == "B2":
+                    self.root.after(STOP_WAIT_TIME * 1000, self.move_bus2)
+
+
+                # self.root.after(
+                #     STOP_WAIT_TIME * 1000,
+                #     self.move_bus1 if color == "red" else self.move_bus2
+                # )
+
+                # if self.helper_bus == True and color == "red":
+                #     self.root.after(STOP_WAIT_TIME * 1000, self.move_bus1_help)
 
         step(0)
 
