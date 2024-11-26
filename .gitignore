@@ -1,0 +1,49 @@
+# Python-specific
+*.pyc
+*.pyo
+__pycache__/
+*.pyd
+*.so
+
+# Byte-compiled and optimized files
+*.egg
+*.egg-info/
+dist/
+build/
+*.log
+*.tmp
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Editor-specific
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# Environment-specific
+.env
+.venv/
+venv/
+ENV/
+env.bak/
+env/
+
+# Tkinter-specific (if you save canvas drawings or logs)
+*.png
+*.svg
+canvas_drawings/
+logs/
+
+# Miscellaneous
+*.bak
+*.old
+debug.log
+*.sqlite3
+
+# Git-specific
+*.orig
