@@ -1,20 +1,50 @@
-# Represents a Bus in the System
 class Bus:
-    def __init__(self, capacity, current_stop=0):
+    def __init__(self, capacity):
         self.capacity = capacity
-        self.current_stop = current_stop
-        self.passengers = []
+        self.passengers = []  # List of passengers on the bus
+        self.current_stop = None  # Current stop of the bus
 
-    def add_passenger(self, passenger):
+    def board_passenger(self, passenger):
+        """
+        Boards a passenger onto the bus if there's space available.
+        Returns True if the passenger was successfully boarded.
+        """
         if len(self.passengers) < self.capacity:
-            passenger.in_bus = True
-            passenger.current_bus = self
+            passenger.status = f"On Bus and Intermediate Stop = {passenger.intermediate_stop}" 
             self.passengers.append(passenger)
             return True
         return False
 
-    def remove_passenger(self, passenger):
-        if passenger in self.passengers:
-            self.passengers.remove(passenger)
-            passenger.in_bus = False
-            passenger.current_bus = None
+    def deboard_passengers(self):
+        """
+        Deboards all passengers whose destination matches the current stop.
+        Returns a list of deboarded passengers.
+        """
+        deboarded_passengers = [
+            p for p in self.passengers if p.end == self.current_stop
+        ]
+
+        transit_passengers = [
+            p for p in self.passengers if p.intermediate_stop == self.current_stop
+        ]
+        # transit_passengers = []
+        # for passenger in self.passengers:
+        #     if(passenger.intermediate_stop):
+        #         transit_passengers = [
+        #             p for p in self.passengers if p.intermediate_stop == self.current_stop
+        #         ]
+        # Remove these passengers from the bus
+        self.passengers = [
+            p for p in self.passengers if p.end != self.current_stop and p.intermediate_stop != self.current_stop
+        ]
+        print("Passengers on bus: ", str(self.passengers))
+
+        for passenger in deboarded_passengers:
+            passenger.status = "Deboarded"
+            print("Deboarded passenger - ", passenger.id)
+
+        for passenger in transit_passengers:
+            passenger.status = "Debaorded at Intersection stop"
+            print("Deboarded passenger at intersection - ", passenger.id)
+            
+        return [deboarded_passengers, transit_passengers]
