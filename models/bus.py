@@ -1,8 +1,9 @@
 class Bus:
-    def __init__(self, capacity):
+    def __init__(self, capacity, name):
         self.capacity = capacity
         self.passengers = []  # List of passengers on the bus
         self.current_stop = None  # Current stop of the bus
+        self.name = name
 
     def board_passenger(self, passenger):
         """
@@ -37,7 +38,7 @@ class Bus:
         self.passengers = [
             p for p in self.passengers if p.end != self.current_stop and p.intermediate_stop != self.current_stop
         ]
-        print("Passengers on bus: ", str(self.passengers))
+        # print("Passengers on bus: ", str(self.passengers))
 
         for passenger in deboarded_passengers:
             passenger.status = "Deboarded"
