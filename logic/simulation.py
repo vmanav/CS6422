@@ -19,7 +19,7 @@ class BusSimulation:
         self.root.title("Bus Simulation")
 
         self.bus1 = Bus(capacity=15, name="B1")  # Bus for Route 1
-        self.bus2 = Bus(capacity=15, name="B2")  # Bus for Route 2
+        self.bus2 = Bus(capacity=30, name="B2")  # Bus for Route 2
         self.bus1_help = Bus(capacity=30, name="BH")  # Bus for Route 1
 
         self.stops = {i: [] for i in STOP_POSITIONS.keys()}
@@ -62,7 +62,7 @@ class BusSimulation:
 
         self.passenger_count_label = tk.Label(
             self.passenger_count_inner_frame,
-            text="Passengers on Bus 1: 0\nPassengers on Bus 2: 0",
+            text="Passengers on Bus 1: 0\nPassengers on Bus 2: 0\nPassengers on Helper Bus: 0",
             font=("Arial", 12), bg="black", fg="white"
         )
         self.passenger_count_label.pack(padx=10, pady=10)
@@ -80,7 +80,7 @@ class BusSimulation:
                 tk.END, f"Passenger {p.id}: {p.status} | Start: {p.start}, End: {p.end}, Intermediate: {p.intermediate_stop}\n"
             )
         self.passenger_count_label.config(
-            text=f"Passengers on Bus 1: {len(self.bus1.passengers)}\nPassengers on Bus 2: {len(self.bus2.passengers)}"
+            text=f"Passengers on Bus 1: {len(self.bus1.passengers)}\nPassengers on Bus 2: {len(self.bus2.passengers)}\nPassengers on Helper Bus: {len(self.bus1_help.passengers)}"
         )
 
     def generate_passenger(self):
